@@ -78,6 +78,7 @@ prompt_context() {
 # Battery Level
 prompt_battery() {
   HEART='♥ '
+  BATTERY='🔋 '
 
   if [[ $(uname) == "Darwin" ]] ; then
 
@@ -129,17 +130,15 @@ prompt_battery() {
   if [[ $(uname) == "Linux" && -d /sys/module/battery ]] ; then
 
     function battery_is_charging() {
-      ! [[ $(acpi 2&>/dev/null | grep -c '^Battery.*Discharging') -gt 0 ]]
+      ! [[ $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/state:/ s/\s*state:\s*(\w)\s*/\1/p' | grep -c "discharging") -lt 1 ]]
     }
 
     function battery_pct() {
-      if (( $+commands[acpi] )) ; then
-        echo "$(acpi | cut -f2 -d ',' | tr -cd '[:digit:]')"
-      fi
+      echo "$(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/percentage:/ s/\s*percentage:\s*([0-9]+).*/\1/p')"
     }
 
     function battery_pct_remaining() {
-      if [ ! $(battery_is_charging) ] ; then
+      if ! $battery_is_charging ; then
         battery_pct
       else
         echo "External Power"
@@ -147,13 +146,13 @@ prompt_battery() {
     }
 
     function battery_time_remaining() {
-      if [[ $(acpi 2&>/dev/null | grep -c '^Battery.*Discharging') -gt 0 ]] ; then
-        echo $(acpi | cut -f3 -d ',')
+      if ! $battery_is_charging ; then
+        echo $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/time to empty:/ s/\s*time to empty:\s*(\w+\s*\w+)/\1/p')
       fi
     }
 
-    b=$(battery_pct_remaining)
-    if [[ $(acpi 2&>/dev/null | grep -c '^Battery.*Discharging') -gt 0 ]] ; then
+    if ! $battery_is_charging ; then
+      b=$(battery_pct_remaining)
       if [ $b -gt 40 ] ; then
         prompt_segment green white
       elif [ $b -gt 20 ] ; then
@@ -161,9 +160,11 @@ prompt_battery() {
       else
         prompt_segment red white
       fi
-      echo -n "%{$fg_bold[white]%}$HEART$(battery_pct_remaining)%%%{$fg_no_bold[white]%}"
+      echo -n "%{$fg_bold[white]%}$HEART$(battery_pct_remaining)%% ($(battery_time_remaining))%{$fg_no_bold[white]%}"
+    else
+      prompt_segment green white
+      echo -n "%{$fg_bold[white]%}$BATTERY$(battery_pct_remaining)%{$fg_no_bold[white]%}"
     fi
-
   fi
 }
 
