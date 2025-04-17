@@ -156,7 +156,7 @@ prompt_battery() {
       if [[ $(battery_state) -eq 0 ]] ; then
         echo $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/time to empty:/ s/\s*time to empty:\s*(\w+\s*\w+)/\1/p')
       elif [[ $(battery_state) -eq 1 ]] ; then
-        echo $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/time to empty:/ s/\s*time to full:\s*(\w+\s*\w+)/\1/p')
+        echo $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/time to full:/ s/\s*time to full:\s*(\w+)/\1/p')
       fi
     }
 
