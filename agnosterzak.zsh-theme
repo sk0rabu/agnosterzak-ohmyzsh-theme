@@ -130,7 +130,7 @@ prompt_battery() {
   if [[ $(uname) == "Linux" && -d /sys/module/battery ]] ; then
 
     function battery_is_charging() {
-      ! [[ $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/state:/ s/\s*state:\s*(\w)\s*/\1/p' | grep -c "discharging") -lt 1 ]]
+      [[ $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/state:/ s/\s*state:\s*(\w)\s*/\1/p' | grep -c "discharging") -lt 1 ]]
     }
 
     function battery_pct() {
@@ -138,7 +138,7 @@ prompt_battery() {
     }
 
     function battery_pct_remaining() {
-      if ! $battery_is_charging ; then
+      if ! battery_is_charging ; then
         battery_pct
       else
         echo "External Power"
@@ -146,12 +146,12 @@ prompt_battery() {
     }
 
     function battery_time_remaining() {
-      if ! $battery_is_charging ; then
+      if ! battery_is_charging ; then
         echo $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/time to empty:/ s/\s*time to empty:\s*(\w+\s*\w+)/\1/p')
       fi
     }
 
-    if ! $battery_is_charging ; then
+    if ! battery_is_charging ; then
       b=$(battery_pct_remaining)
       if [ $b -gt 40 ] ; then
         prompt_segment green white
