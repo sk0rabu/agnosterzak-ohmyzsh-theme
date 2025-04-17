@@ -129,8 +129,15 @@ prompt_battery() {
 
   if [[ $(uname) == "Linux" && -d /sys/module/battery ]] ; then
 
-    function battery_is_charging() {
-      [[ $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/state:/ s/\s*state:\s*(\w)\s*/\1/p' | grep -c "discharging") -lt 1 ]]
+    function battery_state() { # 0 for discharging, 1 for charging, 2 for charged / pending
+      local battery_state_kw=$(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/state:/ s/\s*state:\s*(\w)\s*/\1/p')
+      if [[ $battery_state_kw == "discharging" ]]; then
+        echo 0
+      elif [[ $battery_state_kw == "charging" ]]; then
+        echo 1
+      else
+        echo 2
+      fi
     }
 
     function battery_pct() {
@@ -138,7 +145,7 @@ prompt_battery() {
     }
 
     function battery_pct_remaining() {
-      if ! battery_is_charging ; then
+      if [[ $(battery_state) -ne 2 ]] ; then
         battery_pct
       else
         echo "External Power"
@@ -146,12 +153,14 @@ prompt_battery() {
     }
 
     function battery_time_remaining() {
-      if ! battery_is_charging ; then
+      if [[ $(battery_state) -eq 0 ]] ; then
         echo $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/time to empty:/ s/\s*time to empty:\s*(\w+\s*\w+)/\1/p')
+      elif [[ $(battery_state) -eq 1 ]] ; then
+        echo $(upower -i /org/freedesktop/UPower/devices/battery_BAT1 | sed -nE '/time to empty:/ s/\s*time to full:\s*(\w+\s*\w+)/\1/p')
       fi
     }
 
-    if ! battery_is_charging ; then
+    if [[ $(battery_state) -eq 0 ]] ; then
       b=$(battery_pct_remaining)
       if [ $b -gt 40 ] ; then
         prompt_segment green white
@@ -163,7 +172,11 @@ prompt_battery() {
       echo -n "%{$fg_bold[white]%}$HEART$(battery_pct_remaining)%% ($(battery_time_remaining))%{$fg_no_bold[white]%}"
     else
       prompt_segment green white
-      echo -n "%{$fg_bold[white]%}$BATTERY$(battery_pct_remaining)%{$fg_no_bold[white]%}"
+      if [[ $(battery_state) -eq 1 ]] ; then
+        echo -n "%{$fg_bold[white]%}$BATTERY$(battery_pct_remaining)%% ($(battery_time_remaining))%{$fg_no_bold[white]%}"
+      else
+        echo -n "%{$fg_bold[white]%}$BATTERY$(battery_pct_remaining)%{$fg_no_bold[white]%}"
+      fi
     fi
   fi
 }
